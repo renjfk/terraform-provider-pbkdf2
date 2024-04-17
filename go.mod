@@ -1,4 +1,4 @@
-module github.com/change-engine/terraform-provider-pbkdf2
+module github.com/appkins/terraform-provider-pbkdf2
 
 go 1.17
 

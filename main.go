@@ -5,7 +5,7 @@ import (
 	"flag"
 	"log"
 
-	"github.com/change-engine/terraform-provider-pbkdf2/internal/provider"
+	"github.com/appkins/terraform-provider-pbkdf2/internal/provider"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 )
 
@@ -23,7 +23,7 @@ func main() {
 	flag.Parse()
 
 	opts := providerserver.ServeOpts{
-		Address: "registry.terraform.io/change-engine/pbkdf2",
+		Address: "registry.terraform.io/appkins/pbkdf2",
 		Debug:   debug,
 	}
 

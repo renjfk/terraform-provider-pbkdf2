@@ -1,6 +1,6 @@
 # Terraform Provider PBKDF2
 
-[![registry.terraform.io](https://img.shields.io/badge/terraform-docs-success)](https://registry.terraform.io/providers/change-engine/pbkdf2/latest/docs)
+[![registry.terraform.io](https://img.shields.io/badge/terraform-docs-success)](https://registry.terraform.io/providers/appkins/pbkdf2/latest/docs)
 
 This provider derives a key using PBKDF2.
 
