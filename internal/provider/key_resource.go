@@ -64,8 +64,18 @@ func (r *KeyResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *
 				Computed:            true,
 				Default:             stringdefault.StaticString("sha256"),
 			},
+			"salt": schema.StringAttribute{
+				MarkdownDescription: "The generated salt value.",
+				Computed:            true,
+				Sensitive:           true,
+			},
+			"key": schema.StringAttribute{
+				MarkdownDescription: "The generated key value.",
+				Computed:            true,
+				Sensitive:           true,
+			},
 			"result": schema.StringAttribute{
-				MarkdownDescription: "The generated key result.",
+				MarkdownDescription: "The formatted key result.",
 				Computed:            true,
 				Sensitive:           true,
 			},
@@ -78,6 +88,8 @@ type KeyResourceData struct {
 	Format     types.String `tfsdk:"format"`
 	Password   types.String `tfsdk:"password"`
 	HashFunc   types.String `tfsdk:"hash_func"`
+	Salt       types.String `tfsdk:"salt"`
+	Key        types.String `tfsdk:"key"`
 	Result     types.String `tfsdk:"result"`
 }
 
@@ -154,11 +166,15 @@ func generate(ctx context.Context, req KeyRequest, resp *KeyResponse) {
 		resp.Diagnostics.AddError("Format Error", err.Error())
 		return
 	}
+	saltStr := string(salt)
+	keyStr := string(dk)
 	result := key.String()
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("iterations"), plan.Iterations)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("format"), plan.Format)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("password"), plan.Password)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("hash_func"), plan.HashFunc)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("salt"), saltStr)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("key"), keyStr)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("result"), result)...)
 }
 

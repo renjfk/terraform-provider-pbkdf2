@@ -37,4 +37,6 @@ resource "pbkdf2_key" "example" {
 
 ### Read-Only
 
-- `result` (String, Sensitive) The generated key result.
+- `key` (String, Sensitive) The generated key value.
+- `result` (String, Sensitive) The formatted key result.
+- `salt` (String, Sensitive) The generated salt value.
