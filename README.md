@@ -7,7 +7,7 @@ This provider derives a key using PBKDF2.
 ## Requirements
 
 - [Terraform](https://www.terraform.io/downloads.html) >= 1.0
-- [Go](https://golang.org/doc/install) >= 1.17
+- [Go](https://golang.org/doc/install) >= 1.20
 
 ## Building The Provider
 

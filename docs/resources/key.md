@@ -18,7 +18,7 @@ resource "random_password" "example" {}
 resource "pbkdf2_key" "example" {
   password = random_password.example.result
   # Output for https://github.com/appkins/pbkdf-subtle
-  format = "v01{{printf \"%s\" .Salt}}{{bin 3 .Iterations}}{{printf \"%s\" .Key}}"
+  format = "{{ printf \"%s:%s\" (b64enc .Salt) (b64enc .Key) }}"
 }
 ```
 
@@ -27,7 +27,7 @@ resource "pbkdf2_key" "example" {
 
 ### Required
 
-- `password` (String, Sensitive) Base secret.
+- `password` (String, Sensitive) The password input to encrypt.
 
 ### Optional
 
@@ -36,4 +36,4 @@ resource "pbkdf2_key" "example" {
 
 ### Read-Only
 
-- `key` (String, Sensitive) Derived key.
+- `result` (String, Sensitive) The generated key result.

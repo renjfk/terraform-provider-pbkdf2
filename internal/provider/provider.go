@@ -11,7 +11,7 @@ import (
 
 var _ provider.Provider = &pbkdf2Provider{}
 
-type pbkdf2Provider struct{
+type pbkdf2Provider struct {
 	version string
 }
 

@@ -21,20 +21,20 @@ import (
 )
 
 var (
-	_ resource.Resource                = &keyResource{}
+	_ resource.Resource = &KeyResource{}
 )
 
 func NewKeyResource() resource.Resource {
-	return &keyResource{}
+	return &KeyResource{}
 }
 
-type keyResource struct{}
+type KeyResource struct{}
 
-func (r *keyResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+func (r *KeyResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_key"
 }
 
-func (r *keyResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *KeyResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "PBKDF2 derived key.",
 
@@ -43,21 +43,21 @@ func (r *keyResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *
 				MarkdownDescription: "Number of iterations.",
 				Optional:            true,
 				Computed:            true,
-				Default: int64default.StaticInt64(100000),
+				Default:             int64default.StaticInt64(100000),
 			},
 			"format": schema.StringAttribute{
 				MarkdownDescription: "Output format; will additionally be base64 encoded.",
 				Optional:            true,
 				Computed:            true,
-				Default: stringdefault.StaticString("{{printf \"%s\" .Key}}"),
+				Default:             stringdefault.StaticString("{{ printf \"%s:%s\" (b64enc .Salt) (b64enc .Key) }}"),
 			},
 			"password": schema.StringAttribute{
-				MarkdownDescription: "Base secret.",
-				Required: 			 true,
+				MarkdownDescription: "The password input to encrypt.",
+				Required:            true,
 				Sensitive:           true,
 			},
-			"key": schema.StringAttribute{
-				MarkdownDescription: "Derived key.",
+			"result": schema.StringAttribute{
+				MarkdownDescription: "The generated key result.",
 				Computed:            true,
 				Sensitive:           true,
 			},
@@ -65,36 +65,40 @@ func (r *keyResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *
 	}
 }
 
-type keyResourceData struct {
-	Iterations      types.Int64  `tfsdk:"iterations"`
-	Format 			types.String `tfsdk:"format"`
-	Password        types.String `tfsdk:"password"`
-	Key 			types.String `tfsdk:"key"`
+type KeyResourceData struct {
+	Iterations types.Int64  `tfsdk:"iterations"`
+	Format     types.String `tfsdk:"format"`
+	Password   types.String `tfsdk:"password"`
+	Result     types.String `tfsdk:"result"`
 }
 
 type toFmt struct {
-	Iterations      int
-	Salt           []byte
-	Key				[]byte
+	Iterations int
+	Salt       []byte
+	Key        []byte
 }
 
-type request struct {
+type KeyRequest struct {
 	Plan *tfsdk.Plan
 }
 
-type response struct {
-	State *tfsdk.State
+type KeyResponse struct {
+	State       *tfsdk.State
 	Diagnostics *diag.Diagnostics
 }
 
 func bin(len int, data int) string {
 	bs := make([]byte, 8)
-    binary.BigEndian.PutUint64(bs, uint64(data))
+	binary.BigEndian.PutUint64(bs, uint64(data))
 	return string(bs[8-len:])
 }
 
-func generate(ctx context.Context, req request, resp *response) {
-	var plan keyResourceData
+func b64enc(data []byte) string {
+	return base64.StdEncoding.EncodeToString(data)
+}
+
+func generate(ctx context.Context, req KeyRequest, resp *KeyResponse) {
+	var plan KeyResourceData
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -110,7 +114,8 @@ func generate(ctx context.Context, req request, resp *response) {
 	var key bytes.Buffer
 	formatTemplate := template.New("format")
 	formatTemplate.Funcs(template.FuncMap{
-		"bin": bin,
+		"bin":    bin,
+		"b64enc": b64enc,
 	})
 	_, err = formatTemplate.Parse(plan.Format.ValueString())
 	if err != nil {
@@ -119,32 +124,32 @@ func generate(ctx context.Context, req request, resp *response) {
 	}
 	err = formatTemplate.Execute(&key, toFmt{
 		Iterations: int(plan.Iterations.ValueInt64()),
-		Salt: salt,
-		Key: dk,
+		Salt:       salt,
+		Key:        dk,
 	})
 	if err != nil {
 		resp.Diagnostics.AddError("Format Error", err.Error())
 		return
 	}
-	dk64 :=	base64.StdEncoding.EncodeToString(key.Bytes())
+	result := key.String()
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("iterations"), plan.Iterations)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("format"), plan.Format)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("password"), plan.Password)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("key"), dk64)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("result"), result)...)
 }
 
-func (r keyResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	generate(ctx, request{Plan: &req.Plan}, &response{State: &resp.State, Diagnostics: &resp.Diagnostics})
+func (r KeyResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	generate(ctx, KeyRequest{Plan: &req.Plan}, &KeyResponse{State: &resp.State, Diagnostics: &resp.Diagnostics})
 }
 
-func (r keyResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+func (r KeyResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	// Not needed
 }
 
-func (r keyResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	generate(ctx, request{Plan: &req.Plan}, &response{State: &resp.State, Diagnostics: &resp.Diagnostics})
+func (r KeyResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	generate(ctx, KeyRequest{Plan: &req.Plan}, &KeyResponse{State: &resp.State, Diagnostics: &resp.Diagnostics})
 }
 
-func (r keyResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+func (r KeyResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	resp.State.RemoveResource(ctx)
 }
