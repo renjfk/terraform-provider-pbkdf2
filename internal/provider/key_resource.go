@@ -5,8 +5,10 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/sha512"
 	"encoding/base64"
 	"encoding/binary"
+	"hash"
 	"text/template"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -56,6 +58,12 @@ func (r *KeyResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *
 				Required:            true,
 				Sensitive:           true,
 			},
+			"hash_func": schema.StringAttribute{
+				MarkdownDescription: "The hash function to use.",
+				Optional:            true,
+				Computed:            true,
+				Default:             stringdefault.StaticString("sha256"),
+			},
 			"result": schema.StringAttribute{
 				MarkdownDescription: "The generated key result.",
 				Computed:            true,
@@ -69,6 +77,7 @@ type KeyResourceData struct {
 	Iterations types.Int64  `tfsdk:"iterations"`
 	Format     types.String `tfsdk:"format"`
 	Password   types.String `tfsdk:"password"`
+	HashFunc   types.String `tfsdk:"hash_func"`
 	Result     types.String `tfsdk:"result"`
 }
 
@@ -97,6 +106,17 @@ func b64enc(data []byte) string {
 	return base64.StdEncoding.EncodeToString(data)
 }
 
+func getHashFunc(hashFunc string) (int, func() hash.Hash) {
+	switch hashFunc {
+	case "sha256":
+		return 32, sha256.New
+	case "sha512":
+		return 64, sha512.New
+	default:
+		return 32, sha256.New
+	}
+}
+
 func generate(ctx context.Context, req KeyRequest, resp *KeyResponse) {
 	var plan KeyResourceData
 	diags := req.Plan.Get(ctx, &plan)
@@ -104,13 +124,16 @@ func generate(ctx context.Context, req KeyRequest, resp *KeyResponse) {
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	keyLen, hashFunc := getHashFunc(plan.HashFunc.ValueString())
+
 	var salt = make([]byte, 16)
 	_, err := rand.Read(salt[:])
 	if err != nil {
 		resp.Diagnostics.AddError("Salt Error", err.Error())
 		return
 	}
-	dk := pbkdf2.Key([]byte(plan.Password.ValueString()), salt, int(plan.Iterations.ValueInt64()), 32, sha256.New)
+	dk := pbkdf2.Key([]byte(plan.Password.ValueString()), salt, int(plan.Iterations.ValueInt64()), keyLen, hashFunc)
 	var key bytes.Buffer
 	formatTemplate := template.New("format")
 	formatTemplate.Funcs(template.FuncMap{
@@ -135,6 +158,7 @@ func generate(ctx context.Context, req KeyRequest, resp *KeyResponse) {
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("iterations"), plan.Iterations)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("format"), plan.Format)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("password"), plan.Password)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("hash_func"), plan.HashFunc)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("result"), result)...)
 }
 
