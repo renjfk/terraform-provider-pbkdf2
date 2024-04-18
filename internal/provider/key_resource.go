@@ -58,7 +58,7 @@ func (r *KeyResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *
 				Required:            true,
 				Sensitive:           true,
 			},
-			"hash_func": schema.StringAttribute{
+			"hash_algorithm": schema.StringAttribute{
 				MarkdownDescription: "The hash function to use.",
 				Optional:            true,
 				Computed:            true,
@@ -84,13 +84,13 @@ func (r *KeyResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *
 }
 
 type KeyResourceData struct {
-	Iterations types.Int64  `tfsdk:"iterations"`
-	Format     types.String `tfsdk:"format"`
-	Password   types.String `tfsdk:"password"`
-	HashFunc   types.String `tfsdk:"hash_func"`
-	Salt       types.String `tfsdk:"salt"`
-	Key        types.String `tfsdk:"key"`
-	Result     types.String `tfsdk:"result"`
+	Iterations    types.Int64  `tfsdk:"iterations"`
+	Format        types.String `tfsdk:"format"`
+	Password      types.String `tfsdk:"password"`
+	HashAlgorithm types.String `tfsdk:"hash_algorithm"`
+	Salt          types.String `tfsdk:"salt"`
+	Key           types.String `tfsdk:"key"`
+	Result        types.String `tfsdk:"result"`
 }
 
 type toFmt struct {
@@ -118,7 +118,7 @@ func b64enc(data []byte) string {
 	return base64.StdEncoding.EncodeToString(data)
 }
 
-func getHashFunc(hashFunc string) (int, func() hash.Hash) {
+func getHashAlgorithm(hashFunc string) (int, func() hash.Hash) {
 	switch hashFunc {
 	case "sha256":
 		return 32, sha256.New
@@ -137,7 +137,7 @@ func generate(ctx context.Context, req KeyRequest, resp *KeyResponse) {
 		return
 	}
 
-	keyLen, hashFunc := getHashFunc(plan.HashFunc.ValueString())
+	keyLen, hashFunc := getHashAlgorithm(plan.HashAlgorithm.ValueString())
 
 	var salt = make([]byte, 16)
 	_, err := rand.Read(salt[:])
@@ -172,7 +172,7 @@ func generate(ctx context.Context, req KeyRequest, resp *KeyResponse) {
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("iterations"), plan.Iterations)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("format"), plan.Format)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("password"), plan.Password)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("hash_func"), plan.HashFunc)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("hash_algorithm"), plan.HashAlgorithm)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("salt"), saltStr)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("key"), keyStr)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("result"), result)...)

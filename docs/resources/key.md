@@ -32,7 +32,7 @@ resource "pbkdf2_key" "example" {
 ### Optional
 
 - `format` (String) Output format; will additionally be base64 encoded.
-- `hash_func` (String) The hash function to use.
+- `hash_algorithm` (String) The hash function to use.
 - `iterations` (Number) Number of iterations.
 
 ### Read-Only
