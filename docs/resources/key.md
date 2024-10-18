@@ -34,6 +34,7 @@ resource "pbkdf2_key" "example" {
 - `format` (String) Output format; will additionally be base64 encoded.
 - `hash_algorithm` (String) The hash function to use.
 - `iterations` (Number) Number of iterations.
+- `salt_length` (Number) The length of the generated salt value.
 
 ### Read-Only
 

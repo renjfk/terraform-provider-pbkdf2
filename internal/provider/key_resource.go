@@ -64,6 +64,12 @@ func (r *KeyResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *
 				Computed:            true,
 				Default:             stringdefault.StaticString("sha256"),
 			},
+			"salt_length": schema.Int64Attribute{
+				MarkdownDescription: "The length of the generated salt value.",
+				Optional:            true,
+				Computed:            true,
+				Default:             int64default.StaticInt64(16),
+			},
 			"salt": schema.StringAttribute{
 				MarkdownDescription: "The generated salt value.",
 				Computed:            true,
@@ -88,6 +94,7 @@ type KeyResourceData struct {
 	Format        types.String `tfsdk:"format"`
 	Password      types.String `tfsdk:"password"`
 	HashAlgorithm types.String `tfsdk:"hash_algorithm"`
+	SaltLength    types.Int64  `tfsdk:"salt_length"`
 	Salt          types.String `tfsdk:"salt"`
 	Key           types.String `tfsdk:"key"`
 	Result        types.String `tfsdk:"result"`
@@ -139,7 +146,7 @@ func generate(ctx context.Context, req KeyRequest, resp *KeyResponse) {
 
 	keyLen, hashFunc := getHashAlgorithm(plan.HashAlgorithm.ValueString())
 
-	var salt = make([]byte, 16)
+	var salt = make([]byte, plan.SaltLength.ValueInt64())
 	_, err := rand.Read(salt[:])
 	if err != nil {
 		resp.Diagnostics.AddError("Salt Error", err.Error())
@@ -173,6 +180,7 @@ func generate(ctx context.Context, req KeyRequest, resp *KeyResponse) {
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("format"), plan.Format)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("password"), plan.Password)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("hash_algorithm"), plan.HashAlgorithm)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("salt_length"), plan.SaltLength)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("salt"), saltStr)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("key"), keyStr)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("result"), result)...)
